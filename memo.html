@@ -688,7 +688,7 @@ async function aiOrganize() {
   textEl.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div> AI가 정리 중...';
 
   try {
-    const res = await fetch('https://aiprime.store/v1/messages', {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
