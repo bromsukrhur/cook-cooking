@@ -58,8 +58,8 @@
   /* PATTERN LOCK */
   .pattern-container {
     position: relative;
-    width: 240px;
-    height: 240px;
+    width: 300px;
+    height: 300px;
   }
 
   .pattern-svg {
@@ -74,9 +74,9 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0;
-    width: 240px;
-    height: 240px;
-    padding: 20px;
+    width: 300px;
+    height: 300px;
+    padding: 30px;
   }
 
   .dot-cell {
@@ -84,11 +84,12 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    padding: 10px;
   }
 
   .dot {
-    width: 16px;
-    height: 16px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: var(--border);
     border: 2px solid var(--border);
@@ -532,14 +533,20 @@ function initPattern() {
 }
 
 function getDotIndex(e) {
-  const cells = document.querySelectorAll('.dot-cell');
-  for (const cell of cells) {
-    const r = cell.getBoundingClientRect();
-    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
-      return parseInt(cell.dataset.i);
+  const dots = document.querySelectorAll('.dot');
+  let closest = -1;
+  let minDist = 30;
+  for (let i = 0; i < dots.length; i++) {
+    const r = dots[i].getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dist = Math.sqrt((e.clientX - cx) ** 2 + (e.clientY - cy) ** 2);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = i;
     }
   }
-  return -1;
+  return closest;
 }
 
 function startDraw(e) {
