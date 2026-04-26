@@ -800,6 +800,44 @@ function updateAuthStatus(ok) {
   if (ok) {
     el.textContent = '✓ Google 계정 연결됨 — PC/모바일 동기화 활성화';
     el.className = 'auth-status connected';
+    loadFromSheets();
+  }
+}
+
+async function loadFromSheets() {
+  if (!gAccessToken) return;
+  try {
+    const range = 'Sheet1!A:D';
+    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}`, {
+      headers: { 'Authorization': `Bearer ${gAccessToken}` }
+    });
+    const data = await res.json();
+    if (!data.values || data.values.length === 0) return;
+
+    const sheetMemos = {};
+    data.values.forEach(row => {
+      const [date, raw, organized, updatedAt] = row;
+      if (!date) return;
+      if (!sheetMemos[date] || new Date(updatedAt) > new Date(sheetMemos[date].updatedAt)) {
+        sheetMemos[date] = { date, raw, organized: organized || null, updatedAt };
+      }
+    });
+
+    Object.values(sheetMemos).forEach(sheetMemo => {
+      const idx = memos.findIndex(m => m.date === sheetMemo.date);
+      if (idx < 0) {
+        memos.unshift(sheetMemo);
+      } else if (new Date(sheetMemo.updatedAt) > new Date(memos[idx].updatedAt)) {
+        memos[idx] = sheetMemo;
+      }
+    });
+
+    memos.sort((a, b) => b.date.localeCompare(a.date));
+    localStorage.setItem('memo_data', JSON.stringify(memos));
+    loadTodayMemo();
+    showStatus('✓ 동기화 완료');
+  } catch (e) {
+    console.error('Sheets load error:', e);
   }
 }
 
