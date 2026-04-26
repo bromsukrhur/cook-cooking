@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📓 개인 메모장</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222;
+    --border: #333;
+    --text: #e8e8e0;
+    --text-muted: #888;
+    --accent: #c8a96e;
+    --accent2: #8fb8a0;
+    --danger: #c06060;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* LOCK SCREEN */
+  #lockScreen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    z-index: 100;
+  }
+
+  .lock-title {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 2rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+
+  .lock-sub {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* PATTERN LOCK */
+  .pattern-container {
+    position: relative;
+    width: 240px;
+    height: 240px;
+  }
+
+  .pattern-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .pattern-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    width: 240px;
+    height: 240px;
+    padding: 20px;
+  }
+
+  .dot-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--border);
+    border: 2px solid var(--border);
+    transition: all 0.15s;
+    pointer-events: none;
+  }
+
+  .dot.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+  }
+
+  .dot.error {
+    background: var(--danger);
+    border-color: var(--danger);
+    box-shadow: 0 0 12px var(--danger);
+  }
+
+  .lock-error {
+    font-size: 0.8rem;
+    color: var(--danger);
+    height: 1.2rem;
+  }
+
+  .lock-actions {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .btn {
+    padding: 10px 24px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-accent { border-color: var(--accent); color: var(--accent); }
+  .btn-accent:hover { background: var(--accent); color: var(--bg); }
+
+  /* MAIN APP */
+  #mainApp { display: none; min-height: 100vh; }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .app-title {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 1.3rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+
+  .header-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { padding: 2rem; max-width: 800px; margin: 0 auto; }
+
+  /* MEMO TAB */
+  .date-display {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .memo-textarea {
+    width: 100%;
+    min-height: 300px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 300;
+    line-height: 1.8;
+    padding: 1.5rem;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .memo-textarea:focus { border-color: var(--accent); }
+  .memo-textarea::placeholder { color: var(--text-muted); }
+
+  .memo-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .save-status {
+    font-size: 0.8rem;
+    color: var(--accent2);
+    margin-left: auto;
+  }
+
+  /* AI RESULT */
+  .ai-result {
+    margin-top: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 1.5rem;
+    font-size: 0.9rem;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    display: none;
+  }
+
+  .ai-result.visible { display: block; }
+
+  .ai-label {
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+  }
+
+  /* NOTES TAB */
+  .note-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: border-color 0.2s;
+  }
+
+  .note-card:hover { border-color: var(--accent); }
+
+  .note-date {
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .note-text {
+    font-size: 0.9rem;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .note-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    margin-top: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  .note-badge.organized {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 2;
+  }
+
+  /* SETTINGS TAB */
+  .settings-group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .settings-label {
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .settings-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Noto Sans KR', monospace;
+    font-size: 0.85rem;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 0.75rem;
+  }
+
+  .settings-input:focus { border-color: var(--accent); }
+
+  .settings-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .api-status {
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+  }
+
+  .api-status.ok { color: var(--accent2); }
+  .api-status.err { color: var(--danger); }
+
+  /* GOOGLE AUTH */
+  .google-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: white;
+    color: #333;
+    border: none;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .google-btn:hover { opacity: 0.9; }
+
+  .google-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .auth-status {
+    font-size: 0.8rem;
+    margin-top: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .auth-status.connected { color: var(--accent2); }
+
+  /* LOADING */
+  .loading-dots {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .loading-dots span {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: blink 1.2s infinite;
+  }
+
+  .loading-dots span:nth-child(2) { animation-delay: 0.4s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.8s; }
+
+  @keyframes blink {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
+  }
+
+  @media (max-width: 600px) {
+    .tab-content { padding: 1.25rem; }
+    .app-header { padding: 1rem 1.25rem; }
+    .memo-textarea { min-height: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen">
+  <div class="lock-title">📓 개인 메모장</div>
+  <div class="lock-sub" id="lockSub">패턴을 그려 잠금 해제</div>
+
+  <div class="pattern-container" id="patternContainer">
+    <svg class="pattern-svg" id="patternSvg"></svg>
+    <div class="pattern-grid" id="patternGrid"></div>
+  </div>
+
+  <div class="lock-error" id="lockError"></div>
+
+  <div class="lock-actions" id="lockActions" style="display:none">
+    <button class="btn" onclick="clearPattern()">지우기</button>
+    <button class="btn btn-accent" onclick="savePattern()">패턴 저장</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp">
+  <div class="app-header">
+    <div class="app-title">📓 개인 메모장</div>
+    <div class="header-actions">
+      <button class="btn" style="font-size:0.75rem;padding:6px 14px" onclick="lockApp()">잠금</button>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('memo')">✏️ 메모</div>
+    <div class="tab" onclick="switchTab('notes')">📋 노트</div>
+    <div class="tab" onclick="switchTab('settings')">⚙️ 설정</div>
+  </div>
+
+  <!-- MEMO TAB -->
+  <div id="memoTab" class="tab-content">
+    <div class="date-display" id="todayLabel"></div>
+    <textarea class="memo-textarea" id="memoInput" placeholder="지금 이 순간 떠오르는 생각을 자유롭게 적어보세요..."></textarea>
+    <div class="memo-actions">
+      <button class="btn btn-accent" onclick="saveMemo()">저장</button>
+      <button class="btn" id="aiBtn" onclick="aiOrganize()">🤖 AI 정리</button>
+      <button class="btn" id="retryBtn" onclick="aiOrganize()" style="display:none">🔄 다시 정리</button>
+      <span class="save-status" id="saveStatus"></span>
+    </div>
+    <div class="ai-result" id="aiResult">
+      <div class="ai-label">AI 정리 결과</div>
+      <div id="aiResultText"></div>
+    </div>
+  </div>
+
+  <!-- NOTES TAB -->
+  <div id="notesTab" class="tab-content" style="display:none">
+    <div id="notesList"></div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div id="settingsTab" class="tab-content" style="display:none">
+
+    <div class="settings-group">
+      <div class="settings-label">🔑 AI API 키 (aiprimetech.io)</div>
+      <input type="password" class="settings-input" id="apiKeyInput" placeholder="sk-ant-..." />
+      <button class="btn btn-accent" onclick="saveApiKey()" style="margin-bottom:0.75rem">저장</button>
+      <div class="settings-note">AI 정리 버튼을 누를 때 사용됩니다. 브라우저에만 저장됩니다.</div>
+      <div class="api-status" id="apiStatus"></div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-label">📊 Google 계정 연동</div>
+      <button class="google-btn" onclick="googleLogin()">
+        <svg class="google-icon" viewBox="0 0 48 48">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Google 계정으로 로그인
+      </button>
+      <div class="auth-status" id="authStatus">연결되지 않음 — 로그인하면 PC/모바일 동기화됩니다</div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-label">🔐 패턴 변경</div>
+      <button class="btn" onclick="changePattern()">패턴 변경하기</button>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-label">💾 데이터 백업</div>
+      <button class="btn" onclick="exportData()">JSON으로 내보내기</button>
+      <div class="settings-note" style="margin-top:0.75rem">메모 데이터를 파일로 저장합니다.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CLIENT_ID = '70293107663-a440mvsakhki2s7jb8q4bq2nb688c47n.apps.googleusercontent.com';
+const SHEET_ID = '1J0_URVaOBKGlVIfK55E-SShRp6o5bh3iLpsXmtzCdkA';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+
+let selectedDots = [];
+let isDrawing = false;
+let savedPattern = localStorage.getItem('memo_pattern');
+let isSettingPattern = !savedPattern;
+let memos = JSON.parse(localStorage.getItem('memo_data') || '[]');
+let apiKey = localStorage.getItem('memo_apikey') || '';
+let gAccessToken = localStorage.getItem('memo_gtoken') || '';
+let tokenClient = null;
+
+// ─── PATTERN LOCK ───────────────────────────────────────────
+function initPattern() {
+  const grid = document.getElementById('patternGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'dot-cell';
+    cell.dataset.i = i;
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    dot.id = `dot${i}`;
+    cell.appendChild(dot);
+    grid.appendChild(cell);
+  }
+
+  if (isSettingPattern) {
+    document.getElementById('lockSub').textContent = '사용할 패턴을 그려주세요 (4개 이상)';
+    document.getElementById('lockActions').style.display = 'flex';
+  }
+
+  grid.addEventListener('mousedown', startDraw);
+  grid.addEventListener('mousemove', moveDraw);
+  document.addEventListener('mouseup', endDraw);
+  grid.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e.touches[0]); }, { passive: false });
+  grid.addEventListener('touchmove', e => { e.preventDefault(); moveDraw(e.touches[0]); }, { passive: false });
+  document.addEventListener('touchend', endDraw);
+}
+
+function getDotIndex(e) {
+  const cells = document.querySelectorAll('.dot-cell');
+  for (const cell of cells) {
+    const r = cell.getBoundingClientRect();
+    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+      return parseInt(cell.dataset.i);
+    }
+  }
+  return -1;
+}
+
+function startDraw(e) {
+  isDrawing = true;
+  const idx = getDotIndex(e);
+  if (idx >= 0) addDot(idx);
+}
+
+function moveDraw(e) {
+  if (!isDrawing) return;
+  const idx = getDotIndex(e);
+  if (idx >= 0 && !selectedDots.includes(idx)) addDot(idx);
+}
+
+function endDraw() {
+  if (!isDrawing) return;
+  isDrawing = false;
+  if (selectedDots.length > 0) {
+    if (isSettingPattern) {
+      // wait for user to click save
+    } else {
+      checkPattern();
+    }
+  }
+}
+
+function addDot(i) {
+  selectedDots.push(i);
+  document.getElementById(`dot${i}`).classList.add('active');
+}
+
+function clearPattern() {
+  selectedDots = [];
+  document.querySelectorAll('.dot').forEach(d => d.classList.remove('active', 'error'));
+  document.getElementById('lockError').textContent = '';
+  clearSvgLines();
+}
+
+function clearSvgLines() {
+  document.getElementById('patternSvg').innerHTML = '';
+}
+
+function savePattern() {
+  if (selectedDots.length < 4) {
+    document.getElementById('lockError').textContent = '최소 4개 이상 연결해주세요';
+    return;
+  }
+  localStorage.setItem('memo_pattern', JSON.stringify(selectedDots));
+  savedPattern = JSON.stringify(selectedDots);
+  isSettingPattern = false;
+  document.getElementById('lockSub').textContent = '패턴 저장됨!';
+  document.getElementById('lockActions').style.display = 'none';
+  setTimeout(unlock, 700);
+}
+
+function checkPattern() {
+  if (JSON.stringify(selectedDots) === savedPattern) {
+    unlock();
+  } else {
+    document.querySelectorAll('.dot.active').forEach(d => {
+      d.classList.remove('active');
+      d.classList.add('error');
+    });
+    document.getElementById('lockError').textContent = '패턴이 맞지 않아요';
+    setTimeout(() => { clearPattern(); }, 900);
+  }
+}
+
+function unlock() {
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  loadTodayMemo();
+  if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+  if (gAccessToken) updateAuthStatus(true);
+  loadGapi();
+}
+
+function lockApp() {
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+  isSettingPattern = false;
+  document.getElementById('lockSub').textContent = '패턴을 그려 잠금 해제';
+  document.getElementById('lockActions').style.display = 'none';
+  clearPattern();
+}
+
+function changePattern() {
+  isSettingPattern = true;
+  lockApp();
+  document.getElementById('lockSub').textContent = '새 패턴을 그려주세요 (4개 이상)';
+  document.getElementById('lockActions').style.display = 'flex';
+}
+
+// ─── DATE HELPERS ───────────────────────────────────────────
+function getToday() {
+  return new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+}
+function getTodayKey() {
+  return new Date().toISOString().split('T')[0];
+}
+
+// ─── MEMO ───────────────────────────────────────────────────
+function loadTodayMemo() {
+  document.getElementById('todayLabel').textContent = getToday();
+  const today = memos.find(m => m.date === getTodayKey());
+  document.getElementById('memoInput').value = today ? today.raw : '';
+}
+
+function saveMemo() {
+  const val = document.getElementById('memoInput').value.trim();
+  if (!val) return;
+  const key = getTodayKey();
+  const idx = memos.findIndex(m => m.date === key);
+  const obj = { date: key, raw: val, organized: memos[idx]?.organized || null, updatedAt: Date.now() };
+  if (idx >= 0) memos[idx] = obj; else memos.unshift(obj);
+  localStorage.setItem('memo_data', JSON.stringify(memos));
+  if (gAccessToken) syncToSheets(obj);
+  showStatus('저장됨 ✓');
+}
+
+function showStatus(msg) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = msg;
+  setTimeout(() => el.textContent = '', 2500);
+}
+
+// ─── AI ORGANIZE ────────────────────────────────────────────
+async function aiOrganize() {
+  const val = document.getElementById('memoInput').value.trim();
+  if (!val) { alert('먼저 메모를 작성해주세요'); return; }
+  if (!apiKey) { alert('설정 탭에서 API 키를 먼저 입력해주세요'); return; }
+  saveMemo();
+
+  document.getElementById('aiBtn').style.display = 'none';
+  document.getElementById('retryBtn').style.display = 'none';
+  const resultEl = document.getElementById('aiResult');
+  const textEl = document.getElementById('aiResultText');
+  resultEl.classList.add('visible');
+  textEl.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div> AI가 정리 중...';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `다음은 ${getToday()} 작성한 메모입니다. 날짜별 노트로 깔끔하게 정리해주세요. 핵심 내용을 항목별로 구조화하고, 중요한 것은 강조해주세요:\n\n${val}`
+        }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const organized = data.content[0].text;
+    textEl.textContent = organized;
+    document.getElementById('retryBtn').style.display = 'inline-block';
+
+    const key = getTodayKey();
+    const idx = memos.findIndex(m => m.date === key);
+    if (idx >= 0) {
+      memos[idx].organized = organized;
+      localStorage.setItem('memo_data', JSON.stringify(memos));
+      if (gAccessToken) syncToSheets(memos[idx]);
+    }
+  } catch (e) {
+    textEl.innerHTML = `<span style="color:var(--danger)">오류: ${e.message}</span>`;
+    document.getElementById('aiBtn').style.display = 'inline-block';
+    document.getElementById('retryBtn').style.display = 'inline-block';
+  }
+}
+
+// ─── NOTES TAB ──────────────────────────────────────────────
+function renderNotes() {
+  const list = document.getElementById('notesList');
+  if (!memos.length) {
+    list.innerHTML = '<div class="empty-state">아직 작성된 메모가 없어요.<br>메모 탭에서 첫 메모를 써보세요.</div>';
+    return;
+  }
+  list.innerHTML = memos.map(m => `
+    <div class="note-card">
+      <div class="note-date">${m.date}</div>
+      <div class="note-text">${m.organized || m.raw}</div>
+      <span class="note-badge ${m.organized ? 'organized' : ''}">${m.organized ? 'AI 정리됨' : '미정리'}</span>
+    </div>
+  `).join('');
+}
+
+// ─── TABS ───────────────────────────────────────────────────
+function switchTab(tab) {
+  ['memo', 'notes', 'settings'].forEach(t => {
+    document.getElementById(`${t}Tab`).style.display = t === tab ? 'block' : 'none';
+    document.querySelectorAll('.tab')[['memo','notes','settings'].indexOf(t)].classList.toggle('active', t === tab);
+  });
+  if (tab === 'notes') renderNotes();
+}
+
+// ─── SETTINGS ───────────────────────────────────────────────
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) return;
+  apiKey = key;
+  localStorage.setItem('memo_apikey', key);
+  document.getElementById('apiStatus').textContent = '✓ API 키 저장됨';
+  document.getElementById('apiStatus').className = 'api-status ok';
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(memos, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `memo_backup_${getTodayKey()}.json`; a.click();
+}
+
+// ─── GOOGLE SHEETS ──────────────────────────────────────────
+function loadGapi() {
+  if (document.getElementById('gapiScript')) return;
+  const s = document.createElement('script');
+  s.id = 'gapiScript';
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = initGsi;
+  document.head.appendChild(s);
+}
+
+function initGsi() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { console.error(resp); return; }
+      gAccessToken = resp.access_token;
+      localStorage.setItem('memo_gtoken', gAccessToken);
+      updateAuthStatus(true);
+    }
+  });
+}
+
+function googleLogin() {
+  if (!tokenClient) { alert('잠시 후 다시 시도해주세요'); return; }
+  tokenClient.requestAccessToken();
+}
+
+function updateAuthStatus(ok) {
+  const el = document.getElementById('authStatus');
+  if (ok) {
+    el.textContent = '✓ Google 계정 연결됨 — PC/모바일 동기화 활성화';
+    el.className = 'auth-status connected';
+  }
+}
+
+async function syncToSheets(memo) {
+  if (!gAccessToken) return;
+  try {
+    const range = 'Sheet1!A:D';
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${gAccessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        values: [[memo.date, memo.raw, memo.organized || '', new Date().toISOString()]]
+      })
+    });
+  } catch (e) {
+    console.error('Sheets sync error:', e);
+  }
+}
+
+// ─── INIT ───────────────────────────────────────────────────
+initPattern();
+</script>
+</body>
+</html>
